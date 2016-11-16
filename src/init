@@ -35,16 +35,22 @@ if [[ $ATTEMPTS -eq $MAX_WAIT ]]; then
 fi
 
 # Mount device containing updated image (if any)
-mount -t ext4 $NEWIMG_DEVICE /mnt/newimg
-if [[ -e /mnt/newimg/$OS_IMAGE ]]; then
-	# Mount device containing current image RW and replace with updated image
-	mount -t ext4 $IMG_DEVICE /mnt/img
-	mv -f /mnt/newimg/$OS_IMAGE /mnt/img/$OS_IMAGE-new
-	mv -f /mnt/img/$OS_IMAGE /mnt/img/$OS_IMAGE-old
-	mv /mnt/img/$OS_IMAGE-new /mnt/img/$OS_IMAGE
-	umount /mnt/img
+if findfs $NEWIMG_DEVICE &> /dev/null; then
+	mount -t ext4 $NEWIMG_DEVICE /mnt/newimg
+	if [[ -e /mnt/newimg/$OS_IMAGE ]]; then
+		# Mount device containing current image RW and replace with updated image
+		echo "Detected a new OS image, copying to image partition..."
+		mount -t ext4 $IMG_DEVICE /mnt/img
+		mv -f /mnt/newimg/$OS_IMAGE /mnt/img/$OS_IMAGE-new
+		mv -f /mnt/img/$OS_IMAGE /mnt/img/$OS_IMAGE-old
+		mv /mnt/img/$OS_IMAGE-new /mnt/img/$OS_IMAGE
+		umount /mnt/img
+		echo "New image copied."
+	fi
+	umount /mnt/newimg
+else
+	echo "The 'newimg' partition was not detected, not checking for updated images."
 fi
-umount /mnt/newimg
 
 # Mount device containing current image RO
 mount -t ext4 -o ro $IMG_DEVICE /mnt/img

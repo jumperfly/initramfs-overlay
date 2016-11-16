@@ -18,10 +18,14 @@ This is used as the writeable area of the overlay and consists of three director
 * /persistent: Used as an additional 'lowerdir' of the overlayfs. As the 'upperdir' is cleared, this read-only lower dir allows customisations to be made compared to the read-only OS image. eg. SSH keys.
 
 ### The image partition
-This must contain a single file, root-squashfs.img which contains the full operating system.
+This must contain a single file, root-squashfs.img which contains the full operating system. This is mounted read-only.
+
+If the overlayfs module is found within the image under /lib/modules/<kernel-version> it is loaded, otherwise it is assumed overlayfs support is build into the kernel.
 
 ### The new image partition.
 If the partition is detected and contains an image file with the same name as the one that will be mounted from the image partition it will be moved into the image partition. The previous image will be renamed <name>-old.img
+
+If this partition is used, then the 'image' partition should be at least double the size in order to hold old and new images.
 
 ## Project structure
 The build.sh script will generate two initramfs files per architecture into a 'target' directory.
