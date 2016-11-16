@@ -56,11 +56,15 @@ fi
 mount -t ext4 -o ro $IMG_DEVICE /mnt/img
 
 # Mount boot device and load squashfs module if present
-mount -t vfat -o ro $BOOT_DEVICE /boot
-if [[ -e /boot/modules/$(uname -r)/squashfs.ko ]]; then
-	insmod /boot/modules/$(uname -r)/squashfs.ko
+if findfs $BOOT_DEVIC &> /dev/null; then
+	mount -t vfat -o ro $BOOT_DEVICE /boot
+	if [[ -e /boot/modules/$(uname -r)/squashfs.ko ]]; then
+		insmod /boot/modules/$(uname -r)/squashfs.ko
+	fi
+	umount /boot
+else
+	echo "The 'boot' partition was not detected, not checking for squashfs kernel module."
 fi
-umount /boot
 
 # Mount OS image
 mount -t squashfs -o ro /mnt/img/root-squash.img /mnt/lower
