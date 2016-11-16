@@ -47,7 +47,7 @@ for arch in ${!BUSYBOX_MD5[@]}; do
 	    ln -s busybox $INIT_DIR/bin/$bbcmd
 	done
 	cd $INIT_DIR
-	find . | cpio -H newc -o | gzip > ../init-$PROJECT_VERSION-$arch.gz
+	find . | cpio -H newc -o --owner=0:0 | gzip > ../init-$PROJECT_VERSION-$arch.gz
 	cd ../..
 
 	# Create debug (start shell before switching root, start shell on error instead of exiting)
@@ -56,6 +56,6 @@ for arch in ${!BUSYBOX_MD5[@]}; do
 	sed -i -r '/# End mounting OS filesystems/a sh' $INIT_DIR/init
 	sed -i -r 's/exit 1/sh/' $INIT_DIR/init
 	cd $INIT_DIR
-	find . | cpio -H newc -o | gzip > ../init-$PROJECT_VERSION-$arch-debug.gz
+	find . | cpio -H newc --owner=0:0 -o | gzip > ../init-$PROJECT_VERSION-$arch-debug.gz
 	cd ../..
 done
