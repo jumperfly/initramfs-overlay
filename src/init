@@ -28,13 +28,14 @@ while [[ $ATTEMPTS -lt $MAX_WAIT ]] && ! findfs $OVERLAY_DEVICE > /dev/null; do
 	let ATTEMPTS=ATTEMPTS+1
 done
 if [[ $ATTEMPTS -eq $MAX_WAIT ]]; then
-	echo "***** Boot device not detected: $OVERLAY_DEVICE *****" >&2
+	echo "***** Overlay device not detected: $OVERLAY_DEVICE *****" >&2
 	echo "Exiting..." >&2
 	sleep 5
 	exit 1
 fi
 
 # Mount device containing updated image (if any)
+sleep 1
 if findfs $NEWIMG_DEVICE &> /dev/null; then
 	mount -t ext4 $NEWIMG_DEVICE /mnt/newimg
 	if [[ -e /mnt/newimg/$OS_IMAGE ]]; then
@@ -56,7 +57,7 @@ fi
 mount -t ext4 -o ro $IMG_DEVICE /mnt/img
 
 # Mount boot device and load squashfs module if present
-if findfs $BOOT_DEVIC &> /dev/null; then
+if findfs $BOOT_DEVICE &> /dev/null; then
 	mount -t vfat -o ro $BOOT_DEVICE /boot
 	if [[ -e /boot/modules/$(uname -r)/squashfs.ko ]]; then
 		insmod /boot/modules/$(uname -r)/squashfs.ko
