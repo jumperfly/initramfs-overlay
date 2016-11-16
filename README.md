@@ -15,7 +15,7 @@ If the partition is detected, the squashfs module will be loaded from /modules/<
 This is used as the writeable area of the overlay and consists of three directories which are created if not preset:
 * /upper: Used for the 'upperdir' of the overlayfs. This is where all deleted/modified/created files are stored. This is cleared on each boot.
 * /work: Used for the 'workdir' of the overlayfs.
-* /persistent: Used as an additional 'lowerdir' of the overlayfs. As the 'upperdir' is cleared, this read-only lower dir allows customisations to be made compared to the read-only OS image.
+* /persistent: Used as an additional 'lowerdir' of the overlayfs. As the 'upperdir' is cleared, this read-only lower dir allows customisations to be made compared to the read-only OS image. eg. SSH keys.
 
 ### The image partition
 This must contain a single file, root-squashfs.img which contains the full operating system.
