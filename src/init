@@ -1,0 +1,92 @@
+#!/bin/busybox sh
+
+MAX_WAIT=10
+BOOT_DEVICE="LABEL=boot"
+IMG_DEVICE="LABEL=img"
+NEWIMG_DEVICE="LABEL=newimg"
+OVERLAY_DEVICE="LABEL=overlay"
+OS_IMAGE="root-squash.img"
+
+### Begin creating mount points
+for dir in root img newimg lower overlay; do
+	mkdir -p /mnt/$dir
+done
+### End creating mount points
+
+### Begin mounting special fs
+mount -t devtmpfs none /dev
+mount -t proc none /proc
+mount -t sysfs none /sys
+### End mounting special fs
+
+### Begin mounting OS file systems
+
+# Wait for devices to become available
+ATTEMPTS=0
+while [[ $ATTEMPTS -lt $MAX_WAIT ]] && ! findfs $OVERLAY_DEVICE > /dev/null; do
+	sleep 1
+	let ATTEMPTS=ATTEMPTS+1
+done
+if [[ $ATTEMPTS -eq $MAX_WAIT ]]; then
+	echo "***** Boot device not detected: $OVERLAY_DEVICE *****" >&2
+	echo "Exiting..." >&2
+	sleep 5
+	exit 1
+fi
+
+# Mount device containing updated image (if any)
+mount -t ext4 $NEWIMG_DEVICE /mnt/newimg
+if [[ -e /mnt/newimg/$OS_IMAGE ]]; then
+	# Mount device containing current image RW and replace with updated image
+	mount -t ext4 $IMG_DEVICE /mnt/img
+	mv -f /mnt/newimg/$OS_IMAGE /mnt/img/$OS_IMAGE-new
+	mv -f /mnt/img/$OS_IMAGE /mnt/img/$OS_IMAGE-old
+	mv /mnt/img/$OS_IMAGE-new /mnt/img/$OS_IMAGE
+	umount /mnt/img
+fi
+umount /mnt/newimg
+
+# Mount device containing current image RO
+mount -t ext4 -o ro $IMG_DEVICE /mnt/img
+
+# Mount boot device and load squashfs module if present
+mount -t vfat -o ro $BOOT_DEVICE /boot
+if [[ -e /boot/modules/$(uname -r)/squashfs.ko ]]; then
+	insmod /boot/modules/$(uname -r)/squashfs.ko
+fi
+umount /boot
+
+# Mount OS image
+mount -t squashfs -o ro /mnt/img/root-squash.img /mnt/lower
+
+# Load overlay module if present on OS image
+if [[ -e /mnt/lower/lib/modules/$(uname -r)/kernel/fs/overlayfs/overlay.ko ]]; then
+	insmod /mnt/lower/lib/modules/$(uname -r)/kernel/fs/overlayfs/overlay.ko
+fi
+
+# Mount device for writeable overlay and workdir
+mount -t ext4 $OVERLAY_DEVICE /mnt/overlay
+
+# Clear upper overlay dir
+if [[ -e /mnt/overlay/upper ]]; then
+	rm -rf /mnt/overlay/upper
+fi
+
+# Create base directories if not present
+for dir in persistent upper work; do
+	mkdir -p /mnt/overlay/$dir
+done
+
+# Mount root file system (overlay)
+mount -t overlay -o ro,lowerdir=/mnt/overlay/persistent:/mnt/lower,upperdir=/mnt/overlay/upper,workdir=/mnt/overlay/work overlay /mnt/root
+### End mounting OS filesystems
+
+### Begin unmounting special fs
+umount /proc
+umount /sys
+umount /dev
+### End mounting special fs
+
+### Begin switching root
+exec switch_root /mnt/root /sbin/init
+### End switching root
